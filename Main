@@ -1,0 +1,186 @@
+# Final project: Diving Competition Score Calculator
+import csv
+import os
+
+
+# loading data from the csv file
+    # contains dive code, height, description, degree of difficulty
+DD = {}
+def load_data():
+    with open('DD_table.csv') as DD_table:
+        reader = csv.DictReader(DD_table)
+        for row in reader:
+            dive = row["Dive"] + '-'+ row["Height"]
+            DD[dive] = {      
+                "Description": row["Description"],
+                "DD": row["DD"],
+            }
+
+
+# Getting input from user about the dive lists for an individual diver
+def num_dive_input():
+    while True:
+        try:
+            num_dives = int(input('Number of competition dives: '))
+            dive_list = [] # List to store dives
+            flag_variable = False # a flag variable for a later loop
+
+            for i in range(1, num_dives + 1):     # iterate over number of dive
+                # get input for each dive
+                while True: 
+                    try: 
+                        dive = input(f'Input dive {i}: ').upper()  
+                    # making sure that letters are capitalized with upper()
+                        height = input('Input height: ').upper()
+                    # key that uses both dive and height to search csv file:
+                        dive_key = dive + '-' + height    
+                    
+                        if dive_key not in DD:
+                            raise ValueError
+
+                        else:
+                            dive_list.append(dive_key) # put dive into list
+                            break
+                    except ValueError:
+                        print('Invalid dive. Please try again.')
+                    
+        
+            # checking if the dive list is correct
+            print('Is this correct?')
+            for i in range(0, num_dives):
+                print(f'Dive {i+1}:', DD[dive_list[i]]["Description"])
+                # print('Height:', height) # show the height?
+                print('DD:', DD[dive_list[i]]["DD"])
+
+            
+            while not flag_variable: 
+                check = input("Please write 'yes' or 'no': ")
+                if check == 'yes':
+                    return num_dives, dive_list   
+                    # returns tuple with number of dives 
+                    # and list of dives
+                elif check == 'no':
+                    # go back to beginning of while loop to change dives
+                    print('Please input your dives again.')
+                    flag_variable = True
+                else:
+                    continue
+
+            continue
+
+        except ValueError:
+            print('Please input an integer.')
+
+
+# Allows for there to be multiple divers
+    # in turn uses num_dive_input() to assign a dive list to each diver
+def multiple_divers():
+    while True:
+        try:
+            num_divers = int(input('Number of divers: '))
+            break
+        except ValueError:
+            print('Please input an integer. Try again.')
+            
+    divers = {}  # dictionary to store diver names and their list of dives
+
+    for m in range(1, num_divers + 1):
+        while True:
+            try: 
+                diver_name = input(f'Name of diver {m}: ')
+                if diver_name.isalpha():
+                    break
+                else:
+                    raise ValueError
+            except ValueError:
+                print('Please input a name consisting of letters only.')
+                
+        # calling function for input of number of dives and divers
+        num_dives, dive_list = num_dive_input()
+        # adding dive list to name in the dictionary
+        divers[diver_name] = dive_list    
+
+    return divers    # returns dictionary of divers and their list of dives
+
+# Clearing the screen to allow for the meet simulation to run more smoothly
+def clear_screen():
+    command = "cls" if os.name == "nt" else "clear"
+    os.system(command)
+
+# Simulating the meet
+    # iterating over each dive and assigning scores from judges
+    # also calculates score for each dive and the meet total
+def meet_simulation(divers):
+    clear_screen()
+    print('STARTING COMPETITION')
+    
+    # determine largest number of dives for a diver
+    num_dives = max(len(dive_list) for dive_list in divers.values()) 
+    
+    total_scores = {}
+    
+    for dive_index in range(num_dives):
+        print(f'\nROUND {dive_index + 1}: ')
+    
+    
+        for diver_name, dive_list in divers.items(): # iterating over divers lists
+            if dive_index < len(dive_list):
+                dive = dive_list[dive_index]
+    
+                dive_name = DD.get(dive, {}).get('Description', 'Unknown dive')
+                dive_DD = DD.get(dive, {}).get('DD', "Unknown DD")
+                print('\nDiver:', diver_name)
+                print (f'Dive: {dive_name} (DD: {dive_DD})')
+    
+                # collect scores from judges for each dive
+                judge_scores = []
+                for judge in range(1,4): # 3 judges
+                    while True:
+                        try:
+                            score = float(input(f'Enter score from judge {judge}: '))
+                            if 0 <= score <= 10: #score has to be between 0 and 10
+                                judge_scores.append(score)
+                                break
+                            else:
+                                print('Score must be between 0 and 10. Try again.')
+                        except ValueError:
+                            print('Invalid input. Please enter a number.')
+                # print total score for each dive
+                dive_score = sum(judge_scores) * float(dive_DD)
+                print(f'Dive score: {dive_score}')
+    
+                # add dive score to each diver's total score
+                total_scores.setdefault(diver_name, 0)
+                total_scores[diver_name] += dive_score
+    return total_scores
+
+
+ # RESULTS
+def results(total_scores):
+    clear_screen()
+    # sorting results based on total score 
+    sorted_scores = sorted(total_scores.items(), key=lambda x: x[1], reverse = True) 
+            # lambda x: x[1] to sort after scores (index 1)
+            # reverse = True to sort from largest to smallest
+    print('RESULTS:')
+    for index, (diver_name, total_score) in enumerate(sorted_scores, start=1):
+        print(f'{index}. {diver_name}: {total_score}')
+        
+
+def main ():
+    # loading data
+    load_data()
+
+    # creating dictionary of diver names and their list of dives
+    divers = multiple_divers()   
+
+    # simulating meet, with the divers and their lists as input
+        # returning total score for each diver
+    total_scores = meet_simulation(divers)
+
+    # results: sorting results and printing final standings
+    results(total_scores)
+    
+
+if __name__ == '__main__':
+    main()
